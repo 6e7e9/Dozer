@@ -1,1 +1,527 @@
 
+<!DOCTYPE html>
+<html lang="ku" dir="rtl" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://placehold.co https://*.placehold.co; img-src 'self' data: https:; connect-src 'self';">
+    <meta name="referrer" content="no-referrer">
+    <title>Dozer - دۆزەر | پلاتفۆرمی زانیاری</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Segoe UI', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+                        gold: { 400: '#d4a017', 500: '#b8860b', 600: '#9a7209' },
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg-light: #f8fafc; --card-light: #ffffff; --text-light: #1e293b; --text-secondary-light: #64748b; --border-light: #e2e8f0;
+            --bg-dark: #0f172a; --card-dark: #1e293b; --text-dark: #f1f5f9; --text-secondary-dark: #94a3b8; --border-dark: #334155;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            min-height: 100vh; line-height: 1.6;
+            background-color: var(--bg-light); color: var(--text-light);
+        }
+        .dark body { background-color: var(--bg-dark); color: var(--text-dark); }
+        body, .card-themed, .header-themed, .modal-themed {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .blurred-content { filter: blur(7px); user-select: none; pointer-events: none; transition: filter 0.5s ease; }
+        .blurred-content.revealed { filter: blur(0); user-select: auto; pointer-events: auto; }
+        .blur-overlay {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            z-index: 10; background: rgba(148,163,184,0.2); backdrop-filter: blur(2px); border-radius: 16px;
+            transition: all 0.4s ease;
+        }
+        .blur-overlay.hidden-overlay { opacity: 0; pointer-events: none; }
+
+        .listing-card {
+            transition: transform 0.25s ease, box-shadow 0.25s ease; border-radius: 20px; overflow: hidden;
+            cursor: pointer; border: 1px solid var(--border-light); background: var(--card-light);
+        }
+        .dark .listing-card { border-color: var(--border-dark); background: var(--card-dark); }
+        .listing-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+
+        .modal-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200;
+            display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease;
+        }
+        .modal-container {
+            background: #fff; border-radius: 24px; padding: 2rem; max-width: 480px; width: 92%;
+            max-height: 85vh; overflow-y: auto; position: relative; animation: slideUp 0.3s ease;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+        }
+        .dark .modal-container { background: #1e293b; color: #f1f5f9; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(35px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .btn-primary {
+            background: #2563eb; color: #fff; padding: 0.8rem 1.8rem; border-radius: 14px;
+            font-weight: 600; border: none; cursor: pointer; transition: all 0.2s ease; font-size: 1rem;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary:hover { background: #1d4ed8; transform: scale(1.02); }
+        .btn-gold {
+            background: linear-gradient(135deg, #b8860b, #d4a017); color: #fff;
+            padding: 0.8rem 1.8rem; border-radius: 14px; font-weight: 700; border: none;
+            cursor: pointer; transition: all 0.2s ease; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-gold:hover { transform: scale(1.04); box-shadow: 0 10px 25px rgba(184,134,11,0.45); }
+
+        .input-field {
+            width: 100%; padding: 0.85rem 1rem; border: 2px solid #e2e8f0; border-radius: 14px;
+            font-size: 1rem; transition: all 0.2s ease; background: #fff; color: #1e293b;
+        }
+        .dark .input-field { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+        .input-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.15); }
+
+        .cat-badge {
+            display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 1rem;
+            border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: #dbeafe; color: #1d4ed8;
+        }
+        .dark .cat-badge { background: #1e3a5f; color: #93c5fd; }
+
+        .listings-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; padding: 0.5rem 0;
+        }
+        @media (max-width: 640px) { .listings-grid { grid-template-columns: 1fr; } }
+
+        .toast {
+            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); padding: 0.9rem 2rem;
+            border-radius: 14px; color: #fff; font-weight: 600; z-index: 300; animation: slideUp 0.3s ease;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+        }
+        .toast-success { background: #16a34a; } .toast-error { background: #dc2626; }
+
+        .filter-dropdown {
+            position: absolute; top: 60px; right: 0; background: #fff; border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15); padding: 1rem; min-width: 180px; z-index: 60;
+            border: 1px solid #e2e8f0;
+        }
+        .dark .filter-dropdown { background: #1e293b; border-color: #334155; }
+
+        .admin-table th { background: #f1f5f9; font-weight: 700; position: sticky; top: 0; }
+        .dark .admin-table th { background: #1e293b; }
+        .admin-table td, .admin-table th { padding: 0.7rem 0.8rem; border-bottom: 1px solid #e2e8f0; white-space: nowrap; font-size: 0.85rem; }
+        .dark .admin-table td, .dark .admin-table th { border-bottom-color: #334155; }
+
+        .copy-link-btn {
+            background: none; border: none; cursor: pointer; color: #2563eb; padding: 4px; border-radius: 8px;
+            display: inline-flex; align-items: center; transition: background 0.2s;
+        }
+        .copy-link-btn:hover { background: #eff6ff; }
+        .dark .copy-link-btn:hover { background: #1e3a5f; }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-[#1e293b] dark:bg-[#0f172a] dark:text-[#f1f5f9]">
+
+<!-- ==================== HEADER ==================== -->
+<header class="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm header-themed">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <!-- Logo (5 taps for admin) -->
+        <div id="logo-area" class="flex items-center gap-2 cursor-pointer select-none" onclick="handleLogoTap(event)">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="white" stroke-width="3"/><path d="M8 8L16 8M8 12L14 12M8 16L16 16" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </div>
+            <span class="text-xl font-bold text-gray-800 dark:text-white tracking-tight">Dozer</span>
+        </div>
+
+        <!-- Right controls -->
+        <div class="flex items-center gap-2 relative">
+            <!-- Filter Icon -->
+            <button id="filter-icon-btn" class="p-2 rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors border-none cursor-pointer relative" onclick="toggleFilterDropdown()" aria-label="Filter">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            </button>
+            <!-- Filter Dropdown -->
+            <div id="filter-dropdown-menu" class="filter-dropdown hidden" style="right: 0;">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-2" data-i18n="filter_title">پۆلێن</p>
+                <div class="space-y-1">
+                    <button class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium text-gray-700 dark:text-gray-200" data-cat="all" onclick="selectFilterCategory('all')" data-i18n="filter_all">هەموو</button>
+                    <button class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium text-gray-700 dark:text-gray-200" data-cat="cars" onclick="selectFilterCategory('cars')" data-i18n="filter_cars">ئۆتۆمبێل</button>
+                    <button class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium text-gray-700 dark:text-gray-200" data-cat="phones" onclick="selectFilterCategory('phones')" data-i18n="filter_phones">مۆبایل</button>
+                    <button class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium text-gray-700 dark:text-gray-200" data-cat="realestate" onclick="selectFilterCategory('realestate')" data-i18n="filter_realestate">خانووبەرە</button>
+                    <button class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium text-gray-700 dark:text-gray-200" data-cat="electronics" onclick="selectFilterCategory('electronics')" data-i18n="filter_electronics">ئەلیکترۆنیات</button>
+                    <button class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium text-gray-700 dark:text-gray-200" data-cat="other" onclick="selectFilterCategory('other')" data-i18n="filter_other">هی تر</button>
+                </div>
+            </div>
+
+            <!-- Dark Mode Toggle -->
+            <button class="p-2 rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors cursor-pointer border-none" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
+                <svg id="sun-icon" class="w-5 h-5 hidden dark:block text-yellow-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <svg id="moon-icon" class="w-5 h-5 block dark:hidden text-gray-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+            </button>
+
+            <!-- Language Switcher -->
+            <select id="lang-switcher" class="input-field py-2 px-3 w-auto text-sm cursor-pointer rounded-xl border-2 bg-white dark:bg-slate-800" aria-label="Select language">
+                <option value="ku">کوردی</option>
+                <option value="ar">العربية</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+    </div>
+</header>
+
+<!-- ==================== MAIN CONTENT ==================== -->
+<main id="app-content" class="max-w-7xl mx-auto min-h-[70vh] px-4 py-6 page-content"></main>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="border-t border-gray-200 dark:border-gray-700 py-5 text-center text-sm text-gray-500 dark:text-gray-400">
+    <span data-i18n="footer_text">&copy; 2026 Dozer Platform. هەموو مافێک پارێزراوە.</span>
+</footer>
+
+<!-- ==================== UNLOCK MODAL ==================== -->
+<div id="unlock-modal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal-container modal-themed relative">
+        <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none cursor-pointer bg-transparent border-none z-10" aria-label="Close">&times;</button>
+        <h2 class="text-xl font-bold mb-3" data-i18n="modal_title">کردنەوەی زانیاری خاوەن</h2>
+        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4" data-i18n="modal_description">بۆ وەرگرتنی زانیاری خاوەن، تکایە لە ڕێگەی واتسئەپەوە پەیوەندی بکە.</p>
+        <div class="bg-green-50 dark:bg-green-900/30 border-2 border-green-200 dark:border-green-700 rounded-2xl p-5 mb-4 text-center">
+            <svg class="w-10 h-10 mx-auto mb-2 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            <p class="font-bold text-green-800 dark:text-green-200 text-lg">WhatsApp</p>
+            <p class="text-green-700 dark:text-green-300 text-sm font-mono mt-1" dir="ltr">+964 770 543 5169</p>
+            <a href="https://wa.me/9647705435169" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 mt-3 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-5 rounded-xl transition-colors text-sm no-underline">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span data-i18n="open_whatsapp">کردنەوەی واتسئەپ</span>
+            </a>
+        </div>
+        <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-2xl p-4 mb-4">
+            <p class="text-sm text-blue-800 dark:text-blue-200" data-i18n="modal_instructions">ڕێنمایی: لە ڕێگەی واتسئەپەوە پەیوەندی بە بەڕێوەبەرەوە بکە. دوای پارەدان، بەڕێوەبەر کۆدی چالاککردنت بۆ دەنێرێت.</p>
+        </div>
+        <label class="block text-sm font-semibold mb-1 dark:text-gray-200" data-i18n="enter_code">کۆدی چالاککردن بنووسە:</label>
+        <input type="text" id="activation-code-input" class="input-field mb-3" placeholder="DZ-XXXX-X" autocomplete="off" maxlength="20">
+        <button id="verify-code-btn" class="btn-gold w-full justify-center" data-i18n="verify_unlock">پشتڕاستکردنەوە و کردنەوە</button>
+        <p id="modal-error" class="text-red-500 text-sm mt-2 hidden text-center"></p>
+        <div id="modal-loading" class="text-center mt-3 hidden"><span class="inline-block w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></span></div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+(function() {
+    // ==================== CONFIG (UPDATED CREDENTIALS) ====================
+    const ADMIN_USERNAME = 'Rebwar1989';
+    const ADMIN_PASSWORD = 'Rebwar456@';   // Changed from Rashid@456
+    const WHATSAPP_NUMBER = '+964 770 543 5169';
+    const DEFAULT_LANG = 'ku';
+
+    // ==================== STATE ====================
+    let currentLang = localStorage.getItem('dozer_lang_v5') || DEFAULT_LANG;
+    let isDarkMode = localStorage.getItem('dozer_dark_v5') === 'true';
+    let isAdminLoggedIn = sessionStorage.getItem('dozer_admin_v5') === 'true';
+    let currentCategoryFilter = 'all';
+    let logoTapCount = 0;
+    let logoTapTimer = null;
+
+    // ==================== i18n (includes admin form labels & new copy link) ====================
+    const translations = {
+        ku: {
+            tagline: 'پلاتفۆرمی زانیاری', footer_text: '© 2026 Dozer Platform.', homepage_title: 'هەموو لیستینگەکان',
+            no_listings: 'هیچ لیستینگێک بەردەست نییە.', view_details: 'بینینی وردەکاری', category_label: 'پۆلێن',
+            base_price: 'نرخ', unlock_fee_label: 'کرێی کردنەوە', detail_page_title: 'وردەکاری', back_to_home: 'گەڕانەوە',
+            general_description: 'شیکردنەوە', hidden_section_title: 'زانیاری خاوەن (شاراوە)',
+            unlock_button: 'کردنەوەی زانیاری', unlocked_section: 'زانیاری خاوەن (کراوە)',
+            owner_name: 'ناوی خاوەن', owner_phone: 'ژمارە', exact_location: 'شوێن', admin_notes: 'تێبینی',
+            modal_title: 'کردنەوەی زانیاری', modal_description: 'بۆ زانیاری خاوەن لە واتسئەپ پەیوەندی بکە.',
+            modal_instructions: 'ڕێنمایی: دوای پارەدان کۆدی چالاککردن وەردەگریت.',
+            enter_code: 'کۆدی چالاککردن:', verify_unlock: 'پشتڕاستکردنەوە', invalid_code: 'کۆد هەڵەیە یان بەکارهاتووە.',
+            code_verified: 'کۆد دروستە! زانیاری پیشان دەدرێت.', open_whatsapp: 'کردنەوەی واتسئەپ',
+            admin_login: 'چوونەژوورەوە', admin_username: 'ناوی بەکارهێنەر', admin_password: 'وشەی نهێنی',
+            admin_login_btn: 'چوونەژوورەوە', admin_logout: 'چوونەدەرەوە', admin_add_listing: 'زیادکردنی لیستینگ',
+            admin_code_generator: 'دروستکردنی کۆد', admin_listing_id_label: 'ID', admin_generate_btn: 'دروستکردن',
+            admin_generated_code: 'کۆدی دروستکراو:', admin_copy_code: 'کۆپی', admin_copied: 'کۆپی کرا!',
+            admin_save_listing: 'پاشەکەوتکردن', admin_listing_saved: 'لیستینگ پاشەکەوت کرا. کۆد:',
+            admin_login_error: 'زانیاری هەڵەیە.', filter_title: 'پۆلێنەکان', filter_all: 'هەموو', filter_cars: 'ئۆتۆمبێل',
+            filter_phones: 'مۆبایل', filter_realestate: 'خانووبەرە', filter_electronics: 'ئەلیکترۆنیات', filter_other: 'هی تر',
+            share_link: 'هاوبەشکردنی بەستەر', link_copied: 'بەستەر کۆپی کرا!',
+            copy_listing_link: 'کۆپی بەستەری ڕێکلام', listing_link_copied: 'بەستەری ڕێکلام کۆپی کرا',
+            form_title_ku: 'ناونیشان (کوردی)', form_title_ar: 'ناونیشان (عەرەبی)', form_title_en: 'ناونیشان (ئینگلیزی)',
+            form_desc_ku: 'شیکردنەوە (کوردی)', form_desc_ar: 'شیکردنەوە (عەرەبی)', form_desc_en: 'شیکردنەوە (ئینگلیزی)',
+            form_category: 'پۆلێن', form_image_url: 'لینکی وێنە', form_base_price: 'نرخی بنەڕەتی',
+            form_unlock_fee: 'کرێی کردنەوە', form_owner_name: 'ناوی خاوەن (شاراوە)', form_owner_phone: 'ژمارەی خاوەن (شاراوە)',
+            form_location: 'شوێن (شاراوە)', form_notes: 'تێبینی (شاراوە)',
+            add_listing_guide: 'تکایە پۆلێن و جۆری کاڵا دیاری بکە و زانیارییەکان پڕ بکەرەوە. دوای پاشەکەوتکردن، کۆدی چالاککردن بە شێوەیەکی ڕاندۆم دروست دەکرێت.',
+            categories: { cars:'ئۆتۆمبێل', phones:'مۆبایل', realestate:'خانووبەرە', electronics:'ئەلیکترۆنیات', other:'هی تر' }
+        },
+        ar: {
+            tagline: 'منصة المعلومات', footer_text: '© 2026 Dozer.', homepage_title: 'جميع القوائم', no_listings: 'لا توجد قوائم.',
+            view_details: 'عرض التفاصيل', category_label: 'الفئة', base_price: 'السعر', unlock_fee_label: 'رسوم الفتح',
+            detail_page_title: 'التفاصيل', back_to_home: 'العودة', general_description: 'الوصف',
+            hidden_section_title: 'معلومات المالك (مخفية)', unlock_button: 'فتح المعلومات', unlocked_section: 'معلومات مفتوحة',
+            owner_name: 'اسم المالك', owner_phone: 'الهاتف', exact_location: 'الموقع', admin_notes: 'ملاحظات',
+            modal_title: 'فتح المعلومات', modal_description: 'للحصول على المعلومات تواصل واتساب.', modal_instructions: 'بعد الدفع يصلك الرمز.',
+            enter_code: 'رمز التفعيل:', verify_unlock: 'تحقق', invalid_code: 'رمز خاطئ.', code_verified: 'تم التحقق!',
+            open_whatsapp: 'فتح واتساب', admin_login: 'تسجيل الدخول', admin_username: 'اسم المستخدم', admin_password: 'كلمة المرور',
+            admin_login_btn: 'دخول', admin_logout: 'خروج', admin_add_listing: 'إضافة', admin_code_generator: 'إنشاء رمز',
+            admin_listing_id_label: 'ID', admin_generate_btn: 'إنشاء', admin_generated_code: 'الرمز:', admin_copy_code: 'نسخ',
+            admin_copied: 'تم النسخ!', admin_save_listing: 'حفظ', admin_listing_saved: 'تم الحفظ. الرمز:',
+            admin_login_error: 'بيانات خاطئة.', filter_title: 'الفئات', filter_all: 'الكل', filter_cars: 'سيارات',
+            filter_phones: 'هواتف', filter_realestate: 'عقارات', filter_electronics: 'إلكترونيات', filter_other: 'أخرى',
+            share_link: 'مشاركة الرابط', link_copied: 'تم نسخ الرابط!',
+            copy_listing_link: 'نسخ رابط الإعلان', listing_link_copied: 'تم نسخ رابط الإعلان',
+            form_title_ku: 'العنوان (كردي)', form_title_ar: 'العنوان (عربي)', form_title_en: 'العنوان (إنجليزي)',
+            form_desc_ku: 'الوصف (كردي)', form_desc_ar: 'الوصف (عربي)', form_desc_en: 'الوصف (إنجليزي)',
+            form_category: 'الفئة', form_image_url: 'رابط الصورة', form_base_price: 'السعر الأساسي',
+            form_unlock_fee: 'رسوم الفتح', form_owner_name: 'اسم المالك (مخفي)', form_owner_phone: 'رقم المالك (مخفي)',
+            form_location: 'الموقع (مخفي)', form_notes: 'ملاحظات (مخفية)',
+            add_listing_guide: 'يرجى تحديد الفئة ونوع المنتج وملء البيانات. بعد الحفظ، سيتم إنشاء رمز التفعيل بشكل عشوائي.',
+            categories: { cars:'سيارات', phones:'هواتف', realestate:'عقارات', electronics:'إلكترونيات', other:'أخرى' }
+        },
+        en: {
+            tagline: 'Information Platform', footer_text: '© 2026 Dozer.', homepage_title: 'All Listings', no_listings: 'No listings.',
+            view_details: 'View Details', category_label: 'Category', base_price: 'Price', unlock_fee_label: 'Unlock Fee',
+            detail_page_title: 'Details', back_to_home: 'Back', general_description: 'Description',
+            hidden_section_title: 'Owner Info (Hidden)', unlock_button: 'Unlock Info', unlocked_section: 'Owner Info (Unlocked)',
+            owner_name: 'Owner Name', owner_phone: 'Phone', exact_location: 'Location', admin_notes: 'Notes',
+            modal_title: 'Unlock Info', modal_description: 'Contact via WhatsApp.', modal_instructions: 'After payment you will receive a code.',
+            enter_code: 'Activation Code:', verify_unlock: 'Verify', invalid_code: 'Invalid code.', code_verified: 'Verified!',
+            open_whatsapp: 'Open WhatsApp', admin_login: 'Admin Login', admin_username: 'Username', admin_password: 'Password',
+            admin_login_btn: 'Login', admin_logout: 'Logout', admin_add_listing: 'Add Listing', admin_code_generator: 'Generate Code',
+            admin_listing_id_label: 'ID', admin_generate_btn: 'Generate', admin_generated_code: 'Code:', admin_copy_code: 'Copy',
+            admin_copied: 'Copied!', admin_save_listing: 'Save', admin_listing_saved: 'Saved. Code:',
+            admin_login_error: 'Invalid credentials.', filter_title: 'Categories', filter_all: 'All', filter_cars: 'Cars',
+            filter_phones: 'Phones', filter_realestate: 'Real Estate', filter_electronics: 'Electronics', filter_other: 'Other',
+            share_link: 'Share Link', link_copied: 'Link copied!',
+            copy_listing_link: 'Copy ad link', listing_link_copied: 'Ad link copied',
+            form_title_ku: 'Title (Kurdish)', form_title_ar: 'Title (Arabic)', form_title_en: 'Title (English)',
+            form_desc_ku: 'Description (Kurdish)', form_desc_ar: 'Description (Arabic)', form_desc_en: 'Description (English)',
+            form_category: 'Category', form_image_url: 'Image URL', form_base_price: 'Base Price',
+            form_unlock_fee: 'Unlock Fee', form_owner_name: 'Owner Name (Hidden)', form_owner_phone: 'Owner Phone (Hidden)',
+            form_location: 'Location (Hidden)', form_notes: 'Notes (Hidden)',
+            add_listing_guide: 'Please choose category and product type then fill in the details. After saving, a random activation code will be generated.',
+            categories: { cars:'Cars', phones:'Phones', realestate:'Real Estate', electronics:'Electronics', other:'Other' }
+        }
+    };
+
+    function t(key) { return (translations[currentLang] || translations['ku'])[key] || key; }
+    function tCat(key) { return (translations[currentLang]?.categories || translations['ku'].categories)[key] || key; }
+
+    // ==================== DATABASE ====================
+    function getListings() { try { return JSON.parse(localStorage.getItem('dozer_listings_v5')) || []; } catch(e) { return []; } }
+    function saveListings(l) { localStorage.setItem('dozer_listings_v5', JSON.stringify(l)); }
+    function getCodes() { try { return JSON.parse(localStorage.getItem('dozer_codes_v5')) || []; } catch(e) { return []; } }
+    function saveCodes(c) { localStorage.setItem('dozer_codes_v5', JSON.stringify(c)); }
+    function nextListingId() { const l = getListings(); return l.length ? Math.max(...l.map(x=>x.id))+1 : 1; }
+    function nextCodeId() { const c = getCodes(); return c.length ? Math.max(...c.map(x=>x.code_id))+1 : 1; }
+    function genUniqueCode() {
+        const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c='DZ-'; for(let i=0;i<4;i++) c+=chars[Math.floor(Math.random()*chars.length)]; c+='-'+chars[Math.floor(Math.random()*chars.length)];
+        if(getCodes().some(x=>x.code_string===c)) return genUniqueCode(); return c;
+    }
+
+    // ==================== DARK MODE ====================
+    function applyDarkMode() { document.documentElement.classList.toggle('dark', isDarkMode); localStorage.setItem('dozer_dark_v5', isDarkMode); }
+    function toggleDarkMode() { isDarkMode = !isDarkMode; applyDarkMode(); }
+
+    // ==================== ROUTER ====================
+    function navigateTo(route) { window.location.hash = route; }
+    function getRoute() { return window.location.hash.slice(1) || '/'; }
+    function parseRoute(r) {
+        if(r==='/'||r==='') return {page:'home'}; if(r.startsWith('/item/')) { const id=parseInt(r.split('/item/')[1]); return {page:'item',id:isNaN(id)?null:id}; }
+        if(r==='/admin') return {page:'admin'}; return {page:'home'};
+    }
+
+    // ==================== FILTER ====================
+    function toggleFilterDropdown() { document.getElementById('filter-dropdown-menu').classList.toggle('hidden'); }
+    function selectFilterCategory(cat) { currentCategoryFilter = cat; document.getElementById('filter-dropdown-menu').classList.add('hidden'); renderApp(); }
+    document.addEventListener('click', (e) => { if(!e.target.closest('#filter-icon-btn') && !e.target.closest('#filter-dropdown-menu')) document.getElementById('filter-dropdown-menu').classList.add('hidden'); });
+
+    // ==================== LOGO TAP FOR ADMIN ====================
+    function handleLogoTap(e) {
+        logoTapCount++;
+        if(logoTapTimer) clearTimeout(logoTapTimer);
+        if(logoTapCount >= 5) { logoTapCount = 0; navigateTo('/admin'); showToast('🔐 بەڕێوەبەر', 'success'); }
+        else { logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 800); }
+    }
+    window.handleLogoTap = handleLogoTap;
+
+    // ==================== RENDER ====================
+    function renderApp() {
+        const route = getRoute(); const parsed = parseRoute(route);
+        const content = document.getElementById('app-content');
+        if(parsed.page==='home') renderHome(content);
+        else if(parsed.page==='item' && parsed.id) renderDetail(content, parsed.id);
+        else if(parsed.page==='admin') renderAdmin(content);
+        else renderHome(content);
+        updateI18n(); updateDirection();
+    }
+
+    function updateI18n() {
+        document.querySelectorAll('[data-i18n]').forEach(el=>{ if(el.tagName!=='INPUT'&&el.tagName!=='TEXTAREA') el.textContent=t(el.getAttribute('data-i18n')); });
+        document.title = `Dozer - ${t('tagline')}`;
+    }
+    function updateDirection() {
+        const rtl = currentLang==='ku'||currentLang==='ar'; document.documentElement.dir=rtl?'rtl':'ltr';
+        document.documentElement.lang=currentLang; document.getElementById('lang-switcher').value=currentLang;
+    }
+
+    function renderHome(container) {
+        let listings = getListings();
+        if(currentCategoryFilter!=='all') listings = listings.filter(l=>l.category===currentCategoryFilter);
+        let cards='';
+        if(listings.length===0) cards=`<div class="col-span-full text-center py-20"><p class="text-gray-400">${t('no_listings')}</p></div>`;
+        else listings.forEach(l=>{
+            const title = (l.title&&l.title[currentLang])||l.title['ku']||'';
+            cards+=`<div class="listing-card" onclick="navigateTo('/item/${l.id}')"><div class="aspect-[4/3] bg-gray-100 dark:bg-gray-700"><img src="${l.main_image_url||'https://placehold.co/600x400/cbd5e1/64748b'}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/cbd5e1/64748b'"></div><div class="p-4"><span class="cat-badge">${tCat(l.category)}</span><h3 class="text-lg font-bold mt-2 text-gray-800 dark:text-white line-clamp-2">${title}</h3><div class="flex justify-between mt-3"><span class="text-blue-600 dark:text-blue-400 font-bold">${l.base_price}</span><span class="text-amber-600 dark:text-amber-400 text-sm">${l.unlock_fee}</span></div><button class="btn-primary w-full mt-3" onclick="event.stopPropagation();navigateTo('/item/${l.id}')">${t('view_details')}</button></div></div>`;
+        });
+        container.innerHTML=`<div><h1 class="text-2xl font-bold mb-4">${t('homepage_title')}</h1><div class="listings-grid">${cards}</div></div>`;
+    }
+
+    function renderDetail(container, id) {
+        const listing = getListings().find(l=>l.id===id);
+        if(!listing) { container.innerHTML=`<div class="text-center py-20"><p>${t('no_listings')}</p></div>`; return; }
+        const unlocked = sessionStorage.getItem('unlock_'+id)==='true';
+        container.innerHTML=`
+        <div class="max-w-3xl mx-auto"><button class="text-blue-600 mb-4 flex items-center gap-1" onclick="navigateTo('/')">← ${t('back_to_home')}</button>
+        <div class="flex items-center gap-3 mb-2"><h1 class="text-2xl font-bold">${(listing.title&&listing.title[currentLang])||listing.title['ku']}</h1><span class="cat-badge">${tCat(listing.category)}</span></div>
+        <img src="${listing.main_image_url||'https://placehold.co/800x450'}" class="rounded-2xl w-full aspect-[16/9] object-cover my-4">
+        <div class="flex gap-2 mb-3"><button class="btn-primary text-sm" onclick="shareListing(${id})"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg> ${t('share_link')}</button></div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 mb-4"><h3 class="font-semibold mb-2">${t('general_description')}</h3><p>${(listing.general_description&&listing.general_description[currentLang])||listing.general_description['ku']}</p></div>
+        <div class="flex gap-4 mb-4"><div class="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-4 flex-1"><span>${t('base_price')}</span><p class="text-2xl font-bold">${listing.base_price}</p></div><div class="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4 flex-1"><span>${t('unlock_fee_label')}</span><p class="text-2xl font-bold">${listing.unlock_fee}</p></div></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-5 border" id="premium-box"><h3 class="font-semibold mb-3">${unlocked?t('unlocked_section'):t('hidden_section_title')}</h3><div class="blurred-content ${unlocked?'revealed':''}" id="premium-content"><p><strong>${t('owner_name')}:</strong> <span>${listing.hidden_premium_info?.owner_name||'---'}</span></p><p><strong>${t('owner_phone')}:</strong> <span class="text-blue-600 font-mono">${listing.hidden_premium_info?.owner_phone||'---'}</span></p><p><strong>${t('exact_location')}:</strong> <span>${listing.hidden_premium_info?.exact_location||'---'}</span></p></div><div class="blur-overlay ${unlocked?'hidden-overlay':''}">${unlocked?'':`<button class="btn-gold" onclick="openUnlockModal(${id})">${t('unlock_button')}</button>`}</div></div></div>`;
+    }
+
+    function shareListing(id) {
+        const url = window.location.origin + window.location.pathname + '#/item/' + id;
+        navigator.clipboard.writeText(url).then(()=>showToast(t('link_copied'),'success')).catch(()=>showToast('Copy failed','error'));
+    }
+
+    // ==================== ADMIN ====================
+    function renderAdmin(container) {
+        if(!isAdminLoggedIn) {
+            container.innerHTML=`
+            <div class="max-w-md mx-auto py-12"><div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow">
+            <h2 class="text-xl font-bold mb-4 text-center">${t('admin_login')}</h2>
+            <label class="block text-sm font-semibold mb-1">${t('admin_username')}</label><input type="text" id="admin-user" class="input-field mb-3" autocomplete="off" placeholder="Username">
+            <label class="block text-sm font-semibold mb-1">${t('admin_password')}</label><input type="password" id="admin-pass" class="input-field mb-4" placeholder="Password">
+            <button class="btn-primary w-full" onclick="handleAdminLogin()">${t('admin_login_btn')}</button>
+            <p id="admin-error" class="text-red-500 text-sm mt-2 hidden">${t('admin_login_error')}</p></div></div>`;
+        } else {
+            const listings=getListings(), codes=getCodes();
+            container.innerHTML=`
+            <div class="flex flex-col lg:flex-row gap-6"><div class="lg:w-56"><div class="bg-slate-800 dark:bg-slate-900 rounded-2xl p-5 sticky top-24 text-white">
+            <h2 class="text-lg font-bold mb-4">🔐 ${t('admin_login')}</h2>
+            <a href="#add" onclick="scrollToSection(event,'add-section')" class="block py-2 px-3 rounded-lg hover:bg-slate-700">${t('admin_add_listing')}</a>
+            <a href="#code" onclick="scrollToSection(event,'code-section')" class="block py-2 px-3 rounded-lg hover:bg-slate-700">${t('admin_code_generator')}</a>
+            <a href="#table" onclick="scrollToSection(event,'table-section')" class="block py-2 px-3 rounded-lg hover:bg-slate-700">📋 لیستینگەکان</a>
+            <hr class="my-3 border-gray-600"><button class="text-red-400 w-full text-left py-2 px-3 hover:bg-slate-700" onclick="handleAdminLogout()">${t('admin_logout')}</button></div></div>
+            <div class="flex-1 space-y-6">
+            <div id="add-section" class="bg-white dark:bg-slate-800 rounded-2xl p-6"><h3 class="text-xl font-bold mb-2">${t('admin_add_listing')}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4" data-i18n="add_listing_guide">${t('add_listing_guide')}</p>
+            <form id="add-form" onsubmit="handleAddListing(event)"><div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div><label class="text-sm">${t('form_title_ku')}</label><input name="tku" class="input-field" required></div>
+            <div><label class="text-sm">${t('form_title_ar')}</label><input name="tar" class="input-field" required></div>
+            <div><label class="text-sm">${t('form_title_en')}</label><input name="ten" class="input-field" required></div></div>
+            <div class="grid grid-cols-3 gap-3"><div><label>${t('form_desc_ku')}</label><textarea name="dku" class="input-field" rows="2" required></textarea></div>
+            <div><label>${t('form_desc_ar')}</label><textarea name="dar" class="input-field" rows="2" required></textarea></div>
+            <div><label>${t('form_desc_en')}</label><textarea name="den" class="input-field" rows="2" required></textarea></div></div>
+            <div class="grid grid-cols-3 gap-3"><div><label>${t('form_category')}</label><select name="cat" class="input-field"><option value="cars">${tCat('cars')}</option><option value="phones">${tCat('phones')}</option><option value="realestate">${tCat('realestate')}</option><option value="electronics">${tCat('electronics')}</option><option value="other">${tCat('other')}</option></select></div>
+            <div><label>${t('form_image_url')}</label><input name="img" class="input-field" placeholder="https://..."></div>
+            <div><label>${t('form_base_price')}</label><input name="price" class="input-field" required></div></div>
+            <div class="grid grid-cols-2 gap-3"><div><label>${t('form_unlock_fee')}</label><input name="fee" class="input-field" required></div>
+            <div><label>${t('form_owner_name')}</label><input name="owner" class="input-field" required></div></div>
+            <div class="grid grid-cols-2 gap-3"><div><label>${t('form_owner_phone')}</label><input name="phone" class="input-field" required></div>
+            <div><label>${t('form_location')}</label><input name="loc" class="input-field" required></div></div>
+            <div><label>${t('form_notes')}</label><textarea name="notes" class="input-field" rows="2"></textarea></div>
+            <button type="submit" class="btn-primary w-full mt-3">${t('admin_save_listing')}</button></form>
+            <div id="add-result" class="mt-3 hidden"><p class="text-green-600" id="add-msg"></p><p class="text-sm">کۆد: <strong id="add-code" class="text-xl font-mono"></strong></p></div></div>
+            <div id="code-section" class="bg-white dark:bg-slate-800 rounded-2xl p-6"><h3 class="text-xl font-bold mb-4">${t('admin_code_generator')}</h3>
+            <div class="flex gap-3 items-end"><div class="flex-1"><label>${t('admin_listing_id_label')}</label><input type="number" id="gen-id" class="input-field" min="1"></div>
+            <button class="btn-gold" onclick="handleGenerateCode()">${t('admin_generate_btn')}</button></div>
+            <div id="gen-display" class="mt-4 hidden"><p>${t('admin_generated_code')} <strong id="gen-code" class="text-xl font-mono"></strong></p><button class="btn-primary text-sm" onclick="copyGenCode()">${t('admin_copy_code')}</button><span id="copy-ok" class="text-green-600 ml-2 hidden">${t('admin_copied')}</span></div></div>
+            <div id="table-section" class="bg-white dark:bg-slate-800 rounded-2xl p-6 overflow-x-auto"><h3 class="text-xl font-bold mb-4">📋 هەموو لیستینگەکان (${listings.length})</h3>
+            <table class="admin-table w-full text-sm"><thead><tr><th>ID</th><th>ناونیشان</th><th>پۆلێن</th><th>نرخ</th><th>کۆد</th><th>بەکارهاتوو</th><th>خاوەن</th><th>ژمارە</th><th>🔗 بەستەر</th></tr></thead><tbody>
+            ${listings.map(l=>{ const cc=codes.filter(c=>c.target_listing_id===l.id); return `<tr><td>${l.id}</td><td>${l.title?.ku||''}</td><td>${tCat(l.category)}</td><td>${l.base_price}</td><td>${cc.map(c=>c.code_string).join(', ')||'---'}</td><td>${cc.map(c=>c.is_used?'بەڵێ':'نەخێر').join(', ')||'---'}</td><td>${l.hidden_premium_info?.owner_name||'---'}</td><td dir="ltr">${l.hidden_premium_info?.owner_phone||'---'}</td><td><button class="copy-link-btn" onclick="copyListingLink(${l.id})" title="${t('copy_listing_link')}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></button></td></tr>`; }).join('')}
+            </tbody></table></div></div></div>`;
+        }
+    }
+
+    function scrollToSection(e,id){ e.preventDefault(); document.getElementById(id)?.scrollIntoView({behavior:'smooth'}); }
+
+    function handleAdminLogin(){
+        const u=document.getElementById('admin-user')?.value.trim(), p=document.getElementById('admin-pass')?.value.trim();
+        if(u===ADMIN_USERNAME && p===ADMIN_PASSWORD){ isAdminLoggedIn=true; sessionStorage.setItem('dozer_admin_v5','true'); renderApp(); }
+        else{ document.getElementById('admin-error')?.classList.remove('hidden'); document.getElementById('admin-pass').value=''; }
+    }
+    function handleAdminLogout(){ isAdminLoggedIn=false; sessionStorage.removeItem('dozer_admin_v5'); navigateTo('/'); }
+
+    function handleAddListing(e){
+        e.preventDefault(); const f=new FormData(e.target);
+        const listing={ id:nextListingId(), title:{ku:f.get('tku'),ar:f.get('tar'),en:f.get('ten')}, general_description:{ku:f.get('dku'),ar:f.get('dar'),en:f.get('den')}, category:f.get('cat'), main_image_url:f.get('img')||'https://placehold.co/600x400', base_price:f.get('price'), unlock_fee:f.get('fee'), hidden_premium_info:{owner_name:f.get('owner'),owner_phone:f.get('phone'),exact_location:f.get('loc'),admin_notes:f.get('notes')} };
+        const code={ code_id:nextCodeId(), code_string:genUniqueCode(), target_listing_id:listing.id, is_used:false };
+        const listings=getListings(); listings.push(listing); saveListings(listings);
+        const codes=getCodes(); codes.push(code); saveCodes(codes);
+        document.getElementById('add-result').classList.remove('hidden');
+        document.getElementById('add-msg').textContent=t('admin_listing_saved');
+        document.getElementById('add-code').textContent=code.code_string;
+        e.target.reset(); renderApp(); showToast('✅ لیستینگ زیادکرا','success');
+    }
+    function handleGenerateCode(){
+        const id=parseInt(document.getElementById('gen-id')?.value);
+        if(!id||!getListings().some(l=>l.id===id)){ showToast('ID دروست نییە','error'); return; }
+        const code={ code_id:nextCodeId(), code_string:genUniqueCode(), target_listing_id:id, is_used:false };
+        getCodes().push(code); saveCodes(getCodes());
+        document.getElementById('gen-display').classList.remove('hidden');
+        document.getElementById('gen-code').textContent=code.code_string;
+        renderApp(); showToast('✅ کۆد دروستکرا','success');
+    }
+    function copyGenCode(){ const v=document.getElementById('gen-code')?.textContent; if(v) navigator.clipboard.writeText(v).then(()=>{ document.getElementById('copy-ok').classList.remove('hidden'); setTimeout(()=>document.getElementById('copy-ok').classList.add('hidden'),2000); }); }
+
+    // New function to copy listing link from admin table
+    function copyListingLink(id) {
+        const url = window.location.origin + window.location.pathname + '#/item/' + id;
+        navigator.clipboard.writeText(url).then(()=> showToast(t('listing_link_copied'),'success')).catch(()=> showToast('Copy failed','error'));
+    }
+
+    // ==================== MODAL ====================
+    window._unlockId=null;
+    function openUnlockModal(id){ window._unlockId=id; document.getElementById('unlock-modal').style.display='flex'; document.body.style.overflow='hidden'; document.getElementById('activation-code-input').value=''; document.getElementById('modal-error').classList.add('hidden'); }
+    function closeModal(){ document.getElementById('unlock-modal').style.display='none'; document.body.style.overflow=''; }
+    function handleVerifyCode(){
+        const code=document.getElementById('activation-code-input')?.value.trim().toUpperCase();
+        const id=window._unlockId;
+        if(!code||!id) return;
+        const matched=getCodes().find(c=>c.code_string===code && c.target_listing_id===id && !c.is_used);
+        if(matched){ matched.is_used=true; saveCodes(getCodes()); sessionStorage.setItem('unlock_'+id,'true'); closeModal(); renderApp(); showToast(t('code_verified'),'success'); }
+        else{ document.getElementById('modal-error').classList.remove('hidden'); document.getElementById('activation-code-input').value=''; }
+    }
+
+    // ==================== TOAST ====================
+    function showToast(msg,type='success'){ const c=document.getElementById('toast-container'); const t=document.createElement('div'); t.className=`toast toast-${type}`; t.textContent=msg; c.appendChild(t); setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); },3000); }
+
+    // ==================== EVENTS ====================
+    document.getElementById('lang-switcher').addEventListener('change',function(){ currentLang=this.value; localStorage.setItem('dozer_lang_v5',currentLang); renderApp(); });
+    window.addEventListener('hashchange',()=>{ renderApp(); window.scrollTo({top:0}); });
+    document.getElementById('unlock-modal').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+    document.getElementById('verify-code-btn').addEventListener('click',handleVerifyCode);
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape' && document.getElementById('unlock-modal').style.display==='flex') closeModal(); });
+
+    // Expose all necessary globals
+    window.navigateTo=navigateTo; window.openUnlockModal=openUnlockModal; window.closeModal=closeModal;
+    window.handleAdminLogin=handleAdminLogin; window.handleAdminLogout=handleAdminLogout;
+    window.handleAddListing=handleAddListing; window.handleGenerateCode=handleGenerateCode;
+    window.copyGenCode=copyGenCode; window.scrollToSection=scrollToSection;
+    window.selectFilterCategory=selectFilterCategory; window.shareListing=shareListing;
+    window.toggleFilterDropdown=toggleFilterDropdown; window.toggleDarkMode=toggleDarkMode;
+    window.handleVerifyCode=handleVerifyCode; window.handleLogoTap=handleLogoTap;
+    window.copyListingLink=copyListingLink;   // for admin table copy button
+
+    // Init
+    applyDarkMode(); document.getElementById('lang-switcher').value=currentLang; updateDirection(); renderApp();
+})();
+</script>
+</body>
+</html>
